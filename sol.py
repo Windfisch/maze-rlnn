@@ -48,16 +48,12 @@ arg=args(argv)
 print(arg)
 
 mode = None
-if arg['-1'] or arg['--policy-evaluation']:
-    mode = 1
-elif arg['-2'] or arg['--q-learning']:
-    mode = 2
-else:
+if arg['-h']:
     print("Usage: %s MODE [OPTIONS]" % argv[0])
     print("       MODE:  -1 / --policy-evaluation or\n" +
           "              -2 / --q-learning\n" +
           "       OPTIONS: --theta NUM     # convergence threshold\n" +
-          "                                # default: %f / %f for -1 / -2\n" % (theta_1, thetha_2) +
+          "                                # default: %f / %f for -1 / -2\n" % (theta_1, theta_2) +
           "                --gamma NUM     # learning discount for value iteration\n" +
           "                                # default: %f\n" % gamma +
           "                --alpha NUM     # learning rate for q-learning\n" +
@@ -73,7 +69,7 @@ else:
           "                                # default: %f\n\n" % epsilon_reduction +
           "                --frameskip NUM # frameskip for visualisation\n" +
           "                                # default: %f\n" % frameskip +
-          "                --quiet         # disable visualisation" +
+          "                --quiet         # disable visualisation\n" +
           "                --file FILE     # output file for q learning")
     exit()
 
@@ -246,96 +242,68 @@ class World:
     def is_final(self,s):
         return self.maze[s[1]][s[0]] == 2
 
-if mode == 1:  # policy evaluation
-    theta = theta_1
-    a = World(maze, start)
+theta = theta_2
 
-    V = [ [0.0] * a.xlen for i in range(a.ylen) ]
-    pi = [ [ [0.25] * 4 for i in range(a.xlen) ] for j in range(a.ylen) ]
+a = World(maze, start)
+Q = [ [ [0. for k in range(4)] for i in range(a.xlen) ] for j in range(a.ylen) ]
 
-    i=0
-    while True:
-        i = i + 1
-        delta = 0
-        for x,y in product(range(a.xlen), range(a.ylen)):
-            v = V[y][x]
-            V[y][x] = sum( a.P((x,y),(xx,yy), pi[y][x]) * (  a.R((x,y),(xx,yy), pi[y][x]) + gamma * V[yy][xx]  ) for xx,yy in product(range(a.xlen), range(a.ylen)) )
-            delta = max(delta, abs(v - V[y][x]))
+i=0
+stopstate = -1
+total_reward = 0.
+for i in range(1000000):
+    s = start
+    maxdiff=0.
+    for j in range(100):
+        # epsilon-greedy
+        greedy = argmax(Q[s[1]][s[0]])
+        rnd = random()
+        action = None
+        if rnd < epsilon:
+            action = ( greedy + int(1 + 3 * rnd / epsilon) ) % 4
+        else:
+            action = greedy
 
-        print("iteration %.3d, delta=%.7f"%(i,delta))
+        r,ss = a.take_action(s[0],s[1], action)
+        #print ((r,ss))
+        diff = alpha * (r + gamma * max( [ Q[ss[1]][ss[0]][aa] for aa in directions ] ) - Q[s[1]][s[0]][action])
+        Q[s[1]][s[0]][action] += diff
+        maxdiff = max(abs(diff),maxdiff)
+        total_reward += r
+        s = ss
+        if a.is_final(ss):
+            break
+
+    if (i % (frameskip+1) == 0):
+        print("iteration %.3d, alpha=%.3e, epsilon=%.3e maxdiff=%.7f"%(i,alpha,epsilon,maxdiff))
         n = 0
         if visu:
-            n = visualize(maze,V)
+            n = visualize2(maze,Q)
         cursor_up(n+2)
 
-        if (delta < theta):
-            break
-    print("finished after %d iterations" % i)
-    visualize(maze,V)
+    if (logfile != None):
+        print("%d\t%f" % (i, total_reward), file=logfile)
 
-elif True:  # q-learning
-    theta = theta_2
+    # Wikipedia says on this: "When the problem is stochastic [which it is!],
+    # the algorithm still converges under some technical conditions on the
+    # learning rate, that require it to decrease to zero.
+    # So let's sloooowly decrease our learning rate here. Otherwise it won't
+    # converge, but instead oscillate plus/minus 0.5.
+    # However, if we set the friendlyness of our system to 1.0, then it would
+    # also converge without this learning rate reduction, because we have a
+    # non-stochastic but a deterministic system now.
+    alpha *= alpha_reduction
+    epsilon *= epsilon_reduction
 
-    a = World(maze, start)
-    Q = [ [ [0. for k in range(4)] for i in range(a.xlen) ] for j in range(a.ylen) ]
-
-    i=0
-    stopstate = -1
-    total_reward = 0.
-    for i in range(1000000):
-        s = start
-        maxdiff=0.
-        for j in range(100):
-            # epsilon-greedy
-            greedy = argmax(Q[s[1]][s[0]])
-            rnd = random()
-            action = None
-            if rnd < epsilon:
-                action = ( greedy + int(1 + 3 * rnd / epsilon) ) % 4
-            else:
-                action = greedy
-
-            r,ss = a.take_action(s[0],s[1], action)
-            #print ((r,ss))
-            diff = alpha * (r + gamma * max( [ Q[ss[1]][ss[0]][aa] for aa in directions ] ) - Q[s[1]][s[0]][action])
-            Q[s[1]][s[0]][action] += diff
-            maxdiff = max(abs(diff),maxdiff)
-            total_reward += r
-            s = ss
-            if a.is_final(ss):
-                break
-
-        if (i % (frameskip+1) == 0):
-            print("iteration %.3d, alpha=%.3e, epsilon=%.3e maxdiff=%.7f"%(i,alpha,epsilon,maxdiff))
-            n = 0
-            if visu:
-                n = visualize2(maze,Q)
-            cursor_up(n+2)
-
-        if (logfile != None):
-            print("%d\t%f" % (i, total_reward), file=logfile)
-
-        # Wikipedia says on this: "When the problem is stochastic [which it is!],
-        # the algorithm still converges under some technical conditions on the
-        # learning rate, that require it to decrease to zero.
-        # So let's sloooowly decrease our learning rate here. Otherwise it won't
-        # converge, but instead oscillate plus/minus 0.5.
-        # However, if we set the friendlyness of our system to 1.0, then it would
-        # also converge without this learning rate reduction, because we have a
-        # non-stochastic but a deterministic system now.
-        alpha *= alpha_reduction
-        epsilon *= epsilon_reduction
-
-        
-        # stop once we're below theta for at least 100 episodes. But not before we went above theta at least once.
-        if maxdiff < theta:
-            stopstate -= 1
-            if stopstate == 0:
-                break
-        else:
-            stopstate = 100
     
-    print("finished after %.3d iterations, alpha=%.3e, epsilon=%.3e"%(i,alpha,epsilon))
-    visualize2(maze,Q)
-    if logfile != None:
-        logfile.close()
+    # stop once we're below theta for at least 100 episodes. But not before we went above theta at least once.
+    if maxdiff < theta:
+        stopstate -= 1
+        if stopstate == 0:
+            break
+    else:
+        stopstate = 100
+
+print("finished after %.3d iterations, alpha=%.3e, epsilon=%.3e"%(i,alpha,epsilon))
+visualize2(maze,Q)
+if logfile != None:
+    logfile.close()
