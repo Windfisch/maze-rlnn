@@ -224,7 +224,7 @@ class QNN:
     def __init__(self):
         connection_rate = 1
         num_input = 2
-        hidden = (50,50)
+        hidden = (40,40)
         num_output = 4
         learning_rate = 0.7
 
