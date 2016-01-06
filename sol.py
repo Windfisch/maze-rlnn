@@ -11,6 +11,7 @@ maze = [ [0, 0, 0, 0, 0, 0, 0],
          [0, 0, 0, 0, 0, 1, 2] ]
 
 start=(1,1)
+n_episodes = 1000000
 theta = 0.01
 gamma=0.9 # discount
 epsilon = 0.1
@@ -63,7 +64,9 @@ if arg['-h']:
           "                --epsilon NUM   # value for the epsilon-policy used in q-learning\n" +
           "                                # default: %f\n" % epsilon +
           "                --epsred NUM    # reduction of epsilon per episode\n" +
-          "                                # default: %f\n\n" % epsilon_reduction +
+          "                                # default: %f\n" % epsilon_reduction +
+          "                --episodes NUM  # maximum number of episodes\n"+
+          "                                # default: %i\n\n" % n_episodes +
           "                --qfunc TYPE    # type of the Q function's representation\n" +
           "                                  arr / array -> plain standard array\n" +
           "                                  nn          -> neural network representation\n" +
@@ -77,6 +80,9 @@ if arg['-h']:
 
 if arg['-q'] or arg['--quiet']:
     visu = False
+
+if arg['--episodes']:
+    n_episodes = int(arg['--episodes'])
 
 if arg['--theta']:
     theta = float(arg['--theta'])
@@ -268,7 +274,8 @@ else:
 i=0
 stopstate = -1
 total_reward = 0.
-for i in range(1000000):
+
+for i in range(n_episodes):
     s = start
     maxdiff=0.
     for j in range(100):
