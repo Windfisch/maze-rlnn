@@ -1,0 +1,8 @@
+40-40.log
+derivs/
+logs/
+logtmp/
+doc/doc-gnuplottex-*
+doc/doc.aux
+doc/doc.log
+doc/doc.pdf

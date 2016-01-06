@@ -1,0 +1,35 @@
+\documentclass[ngerman]{scrartcl} %lädt die Dokumentklasse
+
+\usepackage{gnuplottex}
+\usepackage{amsmath}
+
+\begin{document}
+\section{Naive vs Episodic array learning}
+Using the \verb+QArray+ function approximator, different training strategies can be used:
+
+\begin{itemize}
+\item Immediately when a new $(\text{oldstate}, \text{action}, \text{newstate}, \text{reward})$ pair has been learned,
+	update the $Q$ array by:
+	$$Q_{\text{oldstate},\text{action}} = Q_{\text{oldstate},\text{action}} + \alpha \cdot (\text{reward} + \gamma \max_{a'} Q_{\text{newstate},{a'}} - Q_{\text{oldstate},\text{action}})$$
+
+	This is standard textbook reinforcement learning, and referred to as the "old" approach.
+
+\item Alternatively, we can store the $(\text{oldstate}, \text{action}, \text{newstate}, \text{reward})$ pairs in an array,
+	without instantly training them into out array. Then, at the end of an episode, we go through this list \emph{reversed}, and update as above.
+
+	This has two effects:
+	\begin{itemize}
+	\item During an episode, we don't learn anything about former actions done during this episode
+	\item At the end of an episode, a newly discovered path is completely learned, as opposed to the above approach, where for any newly discovered path only the last state before known terrain is learned.
+	\end{itemize}
+\end{itemize}
+
+In the graphs, which show the total reward earned as a function of the episodes ran, we see, that the second ("new") approach converges to an equally good training result, however it gets good faster.
+
+\gnuplotloadfile[terminal=pdf]{array_naive_vs_episodic.gnuplot}
+
+\gnuplotloadfile[terminal=pdf]{array_naive_vs_episodic_deriv.gnuplot}
+
+Code used: \verb+f9a9a51884aadef97b8952b2807541d31b7e9917+ for the "new" plots, and the same code with the line 254 (\verb+self.flush_learnbuffer() # TODO TRYME+) enabled for the "old" plots. Use \verb+sol.py+, or the \verb+test.sh+ script.
+
+\end{document}
