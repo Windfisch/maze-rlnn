@@ -212,14 +212,18 @@ class QArray:
     def __init__(self):
         self.Q = [ [ [0. for k in range(4)] for i in range(a.xlen) ] for j in range(a.ylen) ]
 
+    # calculates Q(x,y)
     def eval(self,x,y = None):
         if y==None: x,y = x
 
         return self.Q[y][x]
     
+
     def change(self, s, action, diff):
         self.Q[s[1]][s[0]][action] += diff
 
+    def episode(self):
+        pass
 
 # implements the Q function not through an array, but through a neuronal network instead.
 class QNN:
@@ -249,6 +253,9 @@ class QNN:
         newval[action] += diff
 
         self.NN.train(list(s), [x/10. for x in newval])
+
+    def episode(self):
+        pass
 
 a = World(maze, start)
 
@@ -283,6 +290,7 @@ for i in range(1000000):
         s = ss
         if a.is_final(ss):
             break
+    Q.episode()
 
     if (i % (frameskip+1) == 0):
         print("iteration %.3d, alpha=%.3e, epsilon=%.3e maxdiff=%.7f"%(i,alpha,epsilon,maxdiff))
