@@ -276,7 +276,6 @@ class QNN (QCommon):
         self.NN = libfann.neural_net()
         self.NN.create_sparse_array(connection_rate, (num_input,)+hidden+(num_output,))
         self.NN.set_learning_rate(learning_rate)
-        #self.NN.set_activation_function_input(libfann.SIGMOID_SYMMETRIC_STEPWISE)
         self.NN.set_activation_function_hidden(libfann.SIGMOID_SYMMETRIC_STEPWISE)
         self.NN.set_activation_function_output(libfann.SIGMOID_SYMMETRIC_STEPWISE)
         #self.NN.set_activation_function_output(libfann.LINEAR)
@@ -297,7 +296,7 @@ class QNN (QCommon):
     # this does not necessarily mean that the action is instantly trained into the function 
     # representation. It may be held back in a list, to be batch-trained lated.
     def learn(self, oldstate, action, newstate, reward):
-        diff = self.value_update(oldstate,action,newstate,reward)
+        diff,_ = self.value_update(oldstate,action,newstate,reward)
         Q.change(oldstate,action,diff)
 
     # must be called on every end-of-episode. might trigger batch-training or whatever.
