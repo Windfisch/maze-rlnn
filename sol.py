@@ -1,4 +1,4 @@
-from random import random
+import random
 from itertools import product
 from collections import defaultdict
 from sys import argv
@@ -12,7 +12,7 @@ maze = [ [0, 0, 0, 0, 0, 0, 0],
 
 start=(1,1)
 n_episodes = 1000000
-theta = 0.01
+theta = 0.001
 gamma=0.9 # discount
 epsilon = 0.1
 epsilon_reduction = 1
@@ -81,6 +81,9 @@ if arg['-h']:
 if arg['-q'] or arg['--quiet']:
     visu = False
 
+if arg['--frameskip']:
+    frameskip = int(arg['--frameskip'])
+
 if arg['--episodes']:
     n_episodes = int(arg['--episodes'])
 
@@ -122,7 +125,7 @@ def argmax(l):
 
 def draw_randomly(d):
     c = 0.
-    rnd = random()
+    rnd = random.random()
     for k in d:
         c += d[k]
         if rnd < c:
@@ -205,7 +208,8 @@ class World:
 
     def R(self, s, ss, pi):
         if s!=ss and self.maze[ss[1]][ss[0]] == 2: # goal
-            return 10.0
+            #return 1.0
+            return 0.5
         else:
             return 0.
 
@@ -267,13 +271,19 @@ class QArray(QCommon):
 class QNN (QCommon):
     def __init__(self):
         super().__init__()
+        self.learnbuffer = []
+        self.dumbtraining = False
         connection_rate = 1
         num_input = 2
-        hidden = (40,40)
+        #hidden = (20,20)
+        hidden = (20,10,7)
         num_output = 4
         learning_rate = 0.7
 
         self.NN = libfann.neural_net()
+        #self.NN.set_training_algorithm(libfann.TRAIN_BATCH)
+        self.NN.set_training_algorithm(libfann.TRAIN_RPROP)
+        #self.NN.set_training_algorithm(libfann.TRAIN_QUICKPROP)
         self.NN.create_sparse_array(connection_rate, (num_input,)+hidden+(num_output,))
         self.NN.set_learning_rate(learning_rate)
         self.NN.set_activation_function_hidden(libfann.SIGMOID_SYMMETRIC_STEPWISE)
@@ -283,21 +293,47 @@ class QNN (QCommon):
     def eval(self,x,y = None):
         if y==None: x,y = x
 
-        return [x*10. for x in self.NN.run([x,y])]
+        return self.NN.run([x,y])
     
     def change(self, s, action, diff):
         oldval = self.eval(s)
         newval = list(oldval) # copy list
         newval[action] += diff
 
-        self.NN.train(list(s), [x/10. for x in newval])
+        self.NN.train(list(s), newval)
 
     # learn a transition "from oldstate by action into newstate with reward `reward`"
     # this does not necessarily mean that the action is instantly trained into the function 
     # representation. It may be held back in a list, to be batch-trained lated.
     def learn(self, oldstate, action, newstate, reward):
         diff,_ = self.value_update(oldstate,action,newstate,reward)
-        Q.change(oldstate,action,diff)
+        if self.dumbtraining == True:
+            self.change(oldstate,action,diff)
+        else:
+            self.learnbuffer += [(oldstate, action, newstate, reward)]
+            self.learnbuffer = self.learnbuffer[-20000:]
+            
+            self.train_on_minibatch()
+
+    def train_on_minibatch(self):
+        n = min(30, len(self.learnbuffer))
+        minibatch = random.sample(self.learnbuffer, n)
+
+        inputs = []
+        outputs = []
+        for oldstate, action, newstate, reward in minibatch:
+            diff, val = self.value_update(oldstate, action, newstate, reward)
+            val[action] += diff
+            inputs += [ list(oldstate) ]
+            outputs += [ val ]
+
+        #print("training minibatch of size %i:\n%s\n%s\n\n"%(n, str(inputs), str(outputs)))
+
+        training_data = libfann.training_data()
+        training_data.set_train_data(inputs, outputs)
+        #self.NN.train_epoch(training_data)
+        self.NN.train_on_data(training_data, 5, 0, 0)
+        #print(".")
 
     # must be called on every end-of-episode. might trigger batch-training or whatever.
     #def episode(self):
@@ -320,7 +356,7 @@ for i in range(n_episodes):
     for j in range(100):
         # epsilon-greedy
         greedy = argmax(Q.eval(s))
-        rnd = random()
+        rnd = random.random()
         action = None
         if rnd < epsilon:
             action = ( greedy + int(1 + 3 * rnd / epsilon) ) % 4
