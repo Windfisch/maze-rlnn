@@ -26,10 +26,25 @@ Using the \verb+QArray+ function approximator, different training strategies can
 
 In the graphs, which show the total reward earned as a function of the episodes ran, we see, that the second ("new") approach converges to an equally good training result, however it gets good faster.
 
+\begin{itemize}
+	\item new: second approach as above
+	\item old: first approach as above
+	\item nn2: neuronal network with hidden layer with 50 neurons and sigmoidal-symmetric-stepwise-linear activation function
+	\item nn: same as nn2, but with a friendlyness of $1$ instead of $0.7$
+\end{itemize}
+
+Note that the nn and nn2 runs get a reward of only $0.5$ for reaching the goal, while the old and new runs get $10$. Therefore, the nn/nn2 results have been multiplied by $20$ to make them comparable.
+
 \gnuplotloadfile[terminal=pdf]{array_naive_vs_episodic.gnuplot}
 
 \gnuplotloadfile[terminal=pdf]{array_naive_vs_episodic_deriv.gnuplot}
 
-Code used: \verb+f9a9a51884aadef97b8952b2807541d31b7e9917+ for the "new" plots, and the same code with the line 254 (\verb+self.flush_learnbuffer() # TODO TRYME+) enabled for the "old" plots. Use \verb+sol.py+, or the \verb+test.sh+ script.
+Code used:
+\begin{itemize}
+	\item \verb+f9a9a51884aadef97b8952b2807541d31b7e9917+ for the "new" plots
+	\item the same code with the line 254 (\verb+self.flush_learnbuffer() # TODO TRYME+) enabled for the "old" plots
+	\item \verb+2483f393d9a3740b35606ca6acb6cb2df8ffdcd2+ for the nn/nn2 plots
+\end{itemize}
+Use \verb+sol.py+, or the \verb+test.sh+ script.
 
 \end{document}
