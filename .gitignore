@@ -1,7 +1,7 @@
 40-40.log
-derivs/
-logs/
-logtmp/
+/derivs/
+/logs/
+/logtmp/
 doc/doc-gnuplottex-*
 doc/doc.aux
 doc/doc.log
