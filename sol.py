@@ -412,7 +412,7 @@ for i in range(n_episodes):
     # stop once we're below theta for at least 100 episodes. But not before we went above theta at least once.
     if maxdiff < theta:
         stopstate -= 1
-        if stopstate == 0:
+        if stopstate == 0 and False: # TODO FIXME
             break
     else:
         stopstate = 1000
